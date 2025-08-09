@@ -30,7 +30,7 @@ namespace WPLACE_CTRLF
             int startX = 0;
             int endX = 990;
             int startY = 0;
-            int endY = 1000;
+            int endY = 990;
             int step = 10;
             int maxConcurrency = 5;
 
@@ -169,7 +169,7 @@ namespace WPLACE_CTRLF
                             var page = await browser.NewPageAsync();
                             await page.SetUserAgentAsync("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36");
 
-                            string url = $"https://backend.wplace.live/s0/pixel/1052/737?x={x}&y={y}";
+                            string url = $"https://backend.wplace.live/s0/pixel/{zoneX}/{zoneY}?x={x}&y={y}";
                             var response = await page.GoToAsync(url);
 
                             if (response != null && response.Ok)
