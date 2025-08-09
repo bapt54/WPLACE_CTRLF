@@ -46,4 +46,4 @@ Pour Trouver les zones, il faut aller dans les devtools du navigateur dans l'ong
 ## Exemple d’utilisation
 
 ```bash
-WPLACE_CTRLF.exe -navpath "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" -targetid 1933485 -zonex 1052 -zoney 737
+WPLACE_CTRLF.exe -navpath "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" -targetid 1339861 -zonex 1051 -zoney 737
