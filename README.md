@@ -1,4 +1,4 @@
-# Scanner Pixel avec PuppeteerSharp
+# Scanner Pixel avec PuppeteerSharp pour wplace.live
 
 Ce programme en C# utilise PuppeteerSharp pour scanner des coordonnées dans une grille via des requêtes HTTP dans un navigateur headless (ex: Brave).
 
