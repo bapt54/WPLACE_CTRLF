@@ -37,6 +37,9 @@ Ce programme en C# utilise PuppeteerSharp pour scanner des coordonnées dans une
 - Les coordonnées X et Y doivent être entre 0 et 9999.
 - `-targetid` doit être un entier positif.
 
+Pour Trouver les zones, il faut aller dans les devtools du navigateur dans l'onglet network puis cliquer et voir la tramme émise , le target id est écris lors que lon clique sur un pixel posé par l'utilisateur :
+
+![Exemple zones](docs/Capture d’écran 2025-08-09 221046.png)
 ---
 
 ## Exemple d’utilisation
