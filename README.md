@@ -25,7 +25,7 @@ Ce programme en C# utilise PuppeteerSharp pour scanner des coordonnées dans une
 | `-xmin`          | Coordonnée X de départ                           | Non         | 0                 |
 | `-xmax`          | Coordonnée X de fin                              | Non         | 990               |
 | `-ymin`          | Coordonnée Y de départ                           | Non         | 0                 |
-| `-ymax`          | Coordonnée Y de fin                              | Non         | 1000              |
+| `-ymax`          | Coordonnée Y de fin                              | Non         | 990               |
 | `-step`          | Pas entre chaque scan                            | Non         | 10                |
 | `-maxconcurrency`| Nombre max de requêtes simultanées              | Non         | 5                 |
 
