@@ -1,144 +1,109 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Drawing.Text;
 using System.Net;
 using System.Net.Http;
+using Spectre.Console;
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PuppeteerSharp;
+using static WPLACE_CTRLF.Program;
+using System.Net.Configuration;
 
 namespace WPLACE_CTRLF
 {
-    internal class Program
+    public class Program
     {
+        public class PixelInfo
+        {
+            public int X { get; set; }
+            public int Y { get; set; }
+            public System.Drawing.Color Color { get; set; }
+        }
         public class PaintedBy
         {
             public int id { get; set; }
             public string name { get; set; }
+            public int allianceId { get; set; }
+            public string allianceName { get; set; }
+            public int equippedFlag { get; set; }
+            public string discord { get; set; }
+        }
+
+        public class Region
+        {
+            public int id { get; set; }
+            public int cityId { get; set; }
+            public string name { get; set; }
+            public int number { get; set; }
+            public int countryId { get; set; }
         }
 
         public class PixelResponse
         {
             public PaintedBy paintedBy { get; set; }
+            public Region region { get; set; }
+            public int X { get; set; }
+            public int Y { get; set; }
+
+            public int R { get; set; }
+            public int V { get; set; }
+            public int B { get; set; }
         }
 
+        private static List<PixelResponse> _allPixels = new List<PixelResponse>();
+        
         static async Task Main(string[] args)
         {
 
-            
-            int startX = 0;
-            int endX = 990;
-            int startY = 0;
-            int endY = 990;
-            int step = 10;
-            int maxConcurrency = 5;
+            Console.CancelKeyPress += (sender, e) =>
+            {
+                e.Cancel = true; // empêche l’arrêt immédiat
+                Console.WriteLine("\n--- Pixels enregistrés avant l'arrêt ---");
 
-            
+                foreach (var pixel in _allPixels)
+                {
+                    Console.WriteLine($"{pixel.X},{pixel.Y},{pixel.paintedBy?.id},{pixel.paintedBy?.name},{pixel.paintedBy?.allianceId},{pixel.paintedBy?.allianceName},{pixel.region?.id},{pixel.region?.name},{pixel.paintedBy?.discord},{pixel.R},{pixel.V},{pixel.B}");
+                }
+                CSV();
+                Environment.Exit(0);
+            };
+            int initdelai = 1100;
+            int cptcgtdelai = 0;
+
+            int startX = 0, endX = 999, startY = 0, endY = 999, maxConcurrency = 1;
             string browserPath = null;
-            int targetId = -1;
-            int zoneX = -1;
-            int zoneY = -1;
+            int targetId = -1, zoneX = -1, zoneY = -1;
+            bool all = false;
 
-            
+
             for (int i = 0; i < args.Length; i++)
             {
                 switch (args[i].ToLower())
                 {
-                    case "-xmin":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int xMinVal))
-                        {
-                            startX = xMinVal;
-                            i++;
-                        }
-                        break;
-                    case "-xmax":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int xMaxVal))
-                        {
-                            endX = xMaxVal;
-                            i++;
-                        }
-                        break;
-                    case "-ymin":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int yMinVal))
-                        {
-                            startY = yMinVal;
-                            i++;
-                        }
-                        break;
-                    case "-ymax":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int yMaxVal))
-                        {
-                            endY = yMaxVal;
-                            i++;
-                        }
-                        break;
-                    case "-step":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int stepVal))
-                        {
-                            step = stepVal;
-                            i++;
-                        }
-                        break;
-                    case "-maxconcurrency":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int maxConc))
-                        {
-                            maxConcurrency = maxConc;
-                            i++;
-                        }
-                        break;
-                    case "-navpath":
-                        if (i + 1 < args.Length)
-                        {
-                            browserPath = args[i + 1];
-                            i++;
-                        }
-                        break;
-                    case "-targetid":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int tid))
-                        {
-                            targetId = tid;
-                            i++;
-                        }
-                        break;
-                    case "-zonex":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int zx))
-                        {
-                            zoneX = zx;
-                            i++;
-                        }
-                        break;
-                    case "-zoney":
-                        if (i + 1 < args.Length && int.TryParse(args[i + 1], out int zy))
-                        {
-                            zoneY = zy;
-                            i++;
-                        }
-                        break;
+                    case "-delay": int.TryParse(args[++i], out initdelai); break;
+                    case "-xmin": int.TryParse(args[++i], out startX); break;
+                    case "-xmax": int.TryParse(args[++i], out endX); break;
+                    case "-ymin": int.TryParse(args[++i], out startY); break;
+                    case "-ymax": int.TryParse(args[++i], out endY); break;                    
+                    case "-maxconcurrency": int.TryParse(args[++i], out maxConcurrency); break;
+                    case "-navpath": browserPath = args[++i]; break;
+                    case "-targetid": int.TryParse(args[++i], out targetId); break;
+                    case "-zonex": int.TryParse(args[++i], out zoneX); break;
+                    case "-zoney": int.TryParse(args[++i], out zoneY); break;
+                    case "-all": all = true; break;
                 }
             }
 
-            
-            if (string.IsNullOrEmpty(browserPath))
-            {
-                Console.WriteLine("ERREUR : Le chemin du navigateur (-navpath) est obligatoire.");
-                return;
-            }
-            if (endX >= 1000 || endX >= 1000)
-            {
-                Console.WriteLine("ERREUR : Les coordonées (-xmax -xmin) sont comprises entre 0 et 9999");
-                return;
-            }
-            if (targetId < 0)
-            {
-                Console.WriteLine("ERREUR : L'ID cible (-targetid) est obligatoire et doit être un entier positif.");
-                return ;
-            }
-            if (zoneX < 0 || zoneY < 0)
-            {
-                Console.WriteLine("ERREUR : Les coordonnées de la zone (-zonex et -zoney) sont obligatoires et doivent être positives.");
-                return ;
-            }
+           
+            if (string.IsNullOrEmpty(browserPath)) { Console.WriteLine("ERREUR : -navpath est obligatoire."); return; }           
+            if (zoneX < 0 || zoneY < 0) { Console.WriteLine("ERREUR : -zonex et -zoney sont obligatoires."); return; }
+
 
             var browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
@@ -148,85 +113,273 @@ namespace WPLACE_CTRLF
 
             var semaphore = new SemaphoreSlim(maxConcurrency);
 
-            var tasks = new List<Task>();
+            var PixelnfoList = new List<PixelInfo>();
 
-            int total = ((endX - startX) / step + 1) * ((endY - startY) / step + 1);
+            int total;
             int completed = 0;
             object lockObj = new object();
 
             var foundPoints = new ConcurrentBag<string>();
 
-            for (int x = startX; x <= endX; x += step)
-            {
-                for (int y = startY; y <= endY; y += step)
+            Console.WriteLine($"Téléchargemnt de l'image ...");
+
+            var pixels = GetNonEmptyPixels(DownloadImageAsync($"https://backend.wplace.live/files/s0/tiles/{zoneX}/{zoneY}.png", browser).GetAwaiter().GetResult(), includeColor: true,grouped: !all);
+
+            foreach (var p in pixels)
+            {                
+                PixelnfoList.Add(p);
+            }
+            Console.WriteLine($"Total : {PixelnfoList.Count} Pixels");
+            total = PixelnfoList.Count;
+            Console.WriteLine($"Scan des pixels ... "+initdelai);
+            
+            bool erreur = false;
+            string msgerreur = "";
+
+            // Déclaration d'une variable pour la tâche de progression
+            ProgressTask progressTask = null;
+
+            AnsiConsole.Progress()
+                .Columns(
+                    new TaskDescriptionColumn(),
+                    new ProgressBarColumn(),
+                    new PercentageColumn(),
+                    new RemainingTimeColumn(),
+                    new SpinnerColumn()
+                )
+                .Start(ctx =>
                 {
-                    await semaphore.WaitAsync();
+                    progressTask = ctx.AddTask("[green]Scan en cours[/]", maxValue: total);
 
-                    var task = Task.Run(async () =>
+                    while (PixelnfoList.Count > 0)
                     {
-                        try
+                        var PixelnfoListCopie = PixelnfoList.ToList();
+                        foreach (PixelInfo Pixel in PixelnfoListCopie)
                         {
-                            var page = await browser.NewPageAsync();
-                            await page.SetUserAgentAsync("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36");
+                            semaphore.Wait();
 
-                            string url = $"https://backend.wplace.live/s0/pixel/{zoneX}/{zoneY}?x={x}&y={y}";
-                            var response = await page.GoToAsync(url);
+                            Task.Delay(initdelai).Wait();
 
-                            if (response != null && response.Ok)
+                            Task.Run(async () =>
                             {
-                                string content = await response.TextAsync();
-
                                 try
                                 {
-                                    var pixelData = JsonConvert.DeserializeObject<PixelResponse>(content);
-                                    if (pixelData?.paintedBy?.id == targetId)
+                                    var page = await browser.NewPageAsync();
+                                    await page.SetUserAgentAsync("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36");
+
+                                    var response = await page.GoToAsync($"https://backend.wplace.live/s0/pixel/{zoneX}/{zoneY}?x={Pixel.X}&y={Pixel.Y}");
+
+                                    if (response != null && response.Ok)
                                     {
-                                        foundPoints.Add($"Point trouvé par {pixelData.paintedBy.name} à ({x},{y})");
+                                        cptcgtdelai++;
+                                        if (cptcgtdelai >= 10 && initdelai > 1100)
+                                        {
+                                            cptcgtdelai = 0;
+                                            initdelai -= 100;
+                                        }
+
+                                        PixelnfoList.Remove(Pixel);
+
+                                        string content = await response.TextAsync();
+
+                                        try
+                                        {
+                                            var pixelData = JsonConvert.DeserializeObject<PixelResponse>(content);
+
+                                            pixelData.X=Pixel.X;
+                                            pixelData.Y=Pixel.Y;
+
+                                            pixelData.R = Pixel.Color.R;
+                                            pixelData.V = Pixel.Color.G;
+                                            pixelData.B = Pixel.Color.B;
+                                            _allPixels.Add(pixelData);
+
+                                            completed++;
+                                            if (pixelData?.paintedBy?.id == targetId)
+                                            {
+                                                foundPoints.Add($"Pixel trouvé de {pixelData.paintedBy.name} à ({Pixel})");
+                                            }
+                                        }
+                                        catch (JsonException) { }
+                                    }
+                                    else
+                                    {
+                                        erreur = true;
+                                        msgerreur = response.Status.ToString();
+                                        initdelai = initdelai+100;
+                                    }
+
+                                    await page.CloseAsync();
+                                }
+                                catch (Exception) { }
+                                finally
+                                {
+                                    semaphore.Release();
+
+                                    lock (lockObj)
+                                    {
+                                        
+                                        progressTask.Value = completed;
+
+                                        
+                                        //if (foundPoints.Count > 0)
+                                        //{
+                                        //    var table = new Table().Centered();
+                                        //    table.AddColumn("[green]Target Pixels[/]");
+                                        //    foreach (var point in foundPoints)
+                                        //    {
+                                        //        table.AddRow(point);
+                                        //    }
+                                        //    AnsiConsole.Write(table);
+                                        //}
+
+                                        
+                                        if (erreur)
+                                        {
+                                            erreur = false;
+                                            progressTask.Description = $"[red]{msgerreur}[/]";
+                                            AnsiConsole.MarkupLine($"\n[red]{msgerreur}[/]");
+                                        }
                                     }
                                 }
-                                catch (JsonException)
-                                {
-                                    
-                                }
-                            }
-
-                            await page.CloseAsync();
+                            });
                         }
-                        catch
-                        {
-                            
-                        }
-                        finally
-                        {
-                            semaphore.Release();
-
-                            lock (lockObj)
-                            {
-                                completed++;
-
-                                Console.Clear();
-
-                                
-                                foreach (var point in foundPoints)
-                                    Console.WriteLine(point);
-
-                                
-                                double progress = (completed * 100.0) / total;
-                                Console.WriteLine($"\nProgression : {completed} / {total} ({progress:0.00}%)");
-                            }
-                        }
-                    });
-
-                    tasks.Add(task);
-                }
-            }
-
-            await Task.WhenAll(tasks);
+                    }
+                });
 
             await browser.CloseAsync();
 
+
+
+            CSV();
+
+
             Console.WriteLine("\nScan terminé !");
         }
-    }
-    }
+
+        public static void CSV()
+        {
+            try
+            {
+                string csvPath = $"pixels_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                using (var writer = new StreamWriter(csvPath))
+                {
+                    writer.WriteLine("X,Y,PlayerID,PlayerName,AllianceID,AllianceName,RegionID,RegionName,Discord,R,V,B");
+                    foreach (var p in _allPixels)
+                    { 
+                        writer.WriteLine($"{p.X},{p.Y},{p.paintedBy?.id},{p.paintedBy?.name},{p.paintedBy?.allianceId},{p.paintedBy?.allianceName},{p.region?.id},{p.region?.name},{p.paintedBy?.discord},{p.R},{p.V},{p.B}");
+                    }
+                }
+                Console.WriteLine($"\n[CSV] Export terminé : {csvPath}");
+            }
+            catch (Exception)
+            {
+
+                Console.WriteLine("Export CSV échoué");
+            }
+        }
+
+
+        public static List<PixelInfo> GetNonEmptyPixels(Bitmap bmp, bool includeColor = true, bool grouped = false)
+        {
+            var pixels = new List<PixelInfo>();
+
+            if (bmp.Width != 1000 || bmp.Height != 1000)
+                throw new ArgumentException("L'image doit être exactement 1000x1000 pixels.");
+
+            bool[,] visited = new bool[bmp.Width, bmp.Height];
+
+            
+            int[] dx = { -1, 0, 1, -1, 1, -1, 0, 1 };
+            int[] dy = { -1, -1, -1, 0, 0, 1, 1, 1 };
+
+            for (int y = 0; y < bmp.Height; y++)
+            {
+                for (int x = 0; x < bmp.Width; x++)
+                {
+                    if (visited[x, y]) continue;
+
+                    var c = bmp.GetPixel(x, y);
+                    bool isEmpty = c.A == 0 || (c.R == 255 && c.G == 255 && c.B == 255);
+                    if (isEmpty)
+                    {
+                        visited[x, y] = true;
+                        continue;
+                    }
+
+                    if (!grouped)
+                    {
+                        pixels.Add(new PixelInfo
+                        {
+                            X = x,
+                            Y = y,
+                            Color = includeColor ? c : System.Drawing.Color.Empty
+                        });
+                        visited[x, y] = true;
+                    }
+                    else
+                    {
+                        
+                        var queue = new Queue<(int, int)>();
+                        queue.Enqueue((x, y));
+                        visited[x, y] = true;
+
+                        while (queue.Count > 0)
+                        {
+                            var (cx, cy) = queue.Dequeue();
+
+                            for (int dir = 0; dir < dx.Length; dir++)
+                            {
+                                int nx = cx + dx[dir];
+                                int ny = cy + dy[dir];
+
+                                if (nx >= 0 && nx < bmp.Width && ny >= 0 && ny < bmp.Height && !visited[nx, ny])
+                                {
+                                    var nc = bmp.GetPixel(nx, ny);
+                                    bool neighborEmpty = nc.A == 0 || (nc.R == 255 && nc.G == 255 && nc.B == 255);
+                                    if (!neighborEmpty && nc.ToArgb() == c.ToArgb())
+                                    {
+                                        visited[nx, ny] = true;
+                                        queue.Enqueue((nx, ny));
+                                    }
+                                }
+                            }
+                        }
+
+                        
+                        pixels.Add(new PixelInfo
+                        {
+                            X = x,
+                            Y = y,
+                            Color = includeColor ? c : System.Drawing.Color.Empty
+                        });
+                    }
+                }
+            }
+
+            return pixels;
+        }
+        public static async Task<Bitmap> DownloadImageAsync(string url, IBrowser browser)
+        {
+            var page = await browser.NewPageAsync();
+            await page.SetUserAgentAsync("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36");
+
+            var response = await page.GoToAsync(url);
+            if (response != null && response.Ok)
+            {
+                var bytes = await response.BufferAsync();
+                await page.CloseAsync();
+                return new Bitmap(new System.IO.MemoryStream(bytes));
+            }
+            else
+            {
+                await page.CloseAsync();
+                throw new Exception($"Impossible de télécharger l'image, statut HTTP: {response?.Status}");
+            }
+        }
+
+    } 
+    
+
+}
 

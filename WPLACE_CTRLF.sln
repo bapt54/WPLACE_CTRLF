@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35913.81 d17.13
+VisualStudioVersion = 17.13.35913.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WPLACE_CTRLF", "WPLACE_CTRLF\WPLACE_CTRLF.csproj", "{390B0B4C-2F19-42D8-8A13-DE9846494A31}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WPLACE_SCANNER_WINFORM", "WPLACE_SCANNER_WINFORM\WPLACE_SCANNER_WINFORM.csproj", "{2167E6B4-E0F0-4B87-96F5-8B435E634CD8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{390B0B4C-2F19-42D8-8A13-DE9846494A31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{390B0B4C-2F19-42D8-8A13-DE9846494A31}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{390B0B4C-2F19-42D8-8A13-DE9846494A31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2167E6B4-E0F0-4B87-96F5-8B435E634CD8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2167E6B4-E0F0-4B87-96F5-8B435E634CD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2167E6B4-E0F0-4B87-96F5-8B435E634CD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2167E6B4-E0F0-4B87-96F5-8B435E634CD8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
