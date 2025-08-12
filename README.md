@@ -1,103 +1,60 @@
-name: Scanner Pixel avec PuppeteerSharp pour wplace.live
-description: >
-  Ce programme en C# utilise PuppeteerSharp pour scanner les pixels d'une image issue
-  du site wplace.live. Il fonctionne en ouvrant un navigateur headless (ex : Brave, Chrome)
-  et en effectuant des requêtes HTTP pour identifier les informations des pixels.
-  Les résultats sont exportés automatiquement en CSV.
+# Scanner Pixel avec PuppeteerSharp pour wplace.live
 
-features:
-  - Scan d'une zone 1000x1000 pixels depuis une tuile (`zonex`, `zoney`)
-  - Option pour regrouper les pixels de même couleur ou scanner pixel par pixel
-  - Gestion du délai entre requêtes pour éviter le blocage
-  - Multi-threading avec limitation du nombre de requêtes simultanées
-  - Export automatique au format CSV avec coordonnées, couleurs et infos joueur
-  - Affichage en temps réel de la progression avec barre Spectre.Console
+Ce programme en C# utilise PuppeteerSharp pour scanner des pixels dans une zone spécifique via des requêtes HTTP dans un navigateur headless (ex: Brave).
 
-arguments:
-  - name: -navpath
-    description: Chemin complet vers l’exécutable du navigateur (Brave, Chrome, etc.)
-    required: true
-    default: null
-  - name: -zonex
-    description: Coordonnée X de la tuile (zone)
-    required: true
-    default: null
-  - name: -zoney
-    description: Coordonnée Y de la tuile (zone)
-    required: true
-    default: null
-  - name: -targetid
-    description: ID de l’utilisateur à rechercher (optionnel, filtre les résultats)
-    required: false
-    default: -1
-  - name: -delay
-    description: Délai initial en millisecondes entre chaque requête
-    required: false
-    default: 1100
-  - name: -xmin
-    description: Coordonnée X minimale à scanner (non utilisée dans la version actuelle)
-    required: false
-    default: 0
-  - name: -xmax
-    description: Coordonnée X maximale à scanner (non utilisée dans la version actuelle)
-    required: false
-    default: 999
-  - name: -ymin
-    description: Coordonnée Y minimale à scanner (non utilisée dans la version actuelle)
-    required: false
-    default: 0
-  - name: -ymax
-    description: Coordonnée Y maximale à scanner (non utilisée dans la version actuelle)
-    required: false
-    default: 999
-  - name: -maxconcurrency
-    description: Nombre maximal de requêtes simultanées
-    required: false
-    default: 1
-  - name: -all
-    description: Désactive le regroupement des pixels par couleur et scanne pixel par pixel
-    required: false
-    default: false
+---
 
-usage:
-  example: >
-    WPLACE_CTRLF.exe -navpath "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
-    -targetid 1339861 -zonex 1051 -zoney 737 -delay 1200 -maxconcurrency 3 -all
-  notes:
-    - Les coordonnées `zonex` et `zoney` se trouvent via les DevTools du navigateur,
-      onglet "Network", en inspectant les requêtes envoyées lors d'un clic sur un pixel.
-    - `-targetid` permet de ne lister que les pixels posés par un joueur précis.
-    - `-all` augmente fortement le temps de scan, mais permet une analyse détaillée pixel par pixel.
+## Fonctionnalités
 
-output:
-  format: CSV
-  filename: pixels_YYYYMMDD_HHMMSS.csv
-  columns:
-    - X
-    - Y
-    - PlayerID
-    - PlayerName
-    - AllianceID
-    - AllianceName
-    - RegionID
-    - RegionName
-    - Discord
-    - R
-    - V
-    - B
-  description: >
-    Le fichier CSV est créé automatiquement à la fin du scan ou à l’arrêt du programme
-    (Ctrl+C). Il contient toutes les informations collectées.
+- Scan une zone rectangulaire définie par des coordonnées X et Y.
+- Supporte un délai entre chaque requête pour gérer la charge (`-delay`).
+- Multi-threading avec un nombre max de requêtes simultanées (`-maxconcurrency`).
+- Scan par pixel individuel ou regroupé par zones de couleur (`-all`).
+- Arguments en ligne de commande pour personnaliser la plage, le navigateur utilisé, et la cible.
+- Export automatique des résultats en fichier CSV.
+- Gestion propre de l'arrêt (Ctrl+C) avec sauvegarde des données en cours.
 
-requirements:
-  - .NET 6 ou supérieur
-  - PuppeteerSharp
-  - Newtonsoft.Json
-  - Spectre.Console
-  - Navigateur compatible (Brave, Chrome, Chromium)
+---
 
-screenshot:
-  path: docs/photo.png
-  description: Exemple de récupération des coordonnées `zonex` et `zoney` via DevTools
+## Arguments
 
-license: MIT
+| Argument          | Description                                                    | Obligatoire | Par défaut                      |
+|-------------------|----------------------------------------------------------------|-------------|--------------------------------|
+| `-navpath`        | Chemin complet vers l’exécutable du navigateur                 | Oui         | N/A                            |
+| `-targetid`       | ID de l’utilisateur à rechercher (optionnel)                   | Non         | -1 (non utilisé)               |
+| `-zonex`          | Coordonnée X de la zone                                         | Oui         | N/A                            |
+| `-zoney`          | Coordonnée Y de la zone                                         | Oui         | N/A                            |
+| `-xmin`           | Coordonnée X de départ pour le scan                             | Non         | 0                              |
+| `-xmax`           | Coordonnée X de fin pour le scan                                | Non         | 999                            |
+| `-ymin`           | Coordonnée Y de départ pour le scan                             | Non         | 0                              |
+| `-ymax`           | Coordonnée Y de fin pour le scan                                | Non         | 999                            |
+| `-delay`          | Délai en millisecondes entre chaque requête                    | Non         | 1100                           |
+| `-maxconcurrency` | Nombre maximum de requêtes simultanées                         | Non         | 1                              |
+| `-all`            | Scanner tous les pixels sans regroupement par zones de couleur | Non         | false (regroupement activé)    |
+
+---
+
+## Validation
+
+- `-navpath`, `-zonex`, `-zoney` sont obligatoires.
+- `-targetid` est optionnel, utilisé uniquement pour filtrer certains pixels dans le résultat.
+- Les coordonnées X et Y doivent être entre 0 et 999.
+- `-delay` doit être un entier positif.
+- `-maxconcurrency` doit être un entier positif.
+
+---
+
+## Notes
+
+- Le programme télécharge une image 1000x1000 pixels correspondant à la zone spécifiée (`-zonex` et `-zoney`).
+- Par défaut, le scan regroupe les pixels contigus de même couleur en un seul point, pour réduire le nombre de requêtes.
+- Avec l’option `-all`, le scan se fait pixel par pixel, sans regroupement.
+- Les résultats sont automatiquement exportés dans un fichier CSV horodaté à la fin du scan ou lors d’un arrêt (Ctrl+C).
+- Le délai (`-delay`) est ajusté dynamiquement selon la charge et les erreurs HTTP rencontrées.
+
+---
+
+## Exemple d’utilisation
+
+```bash
+WPLACE_CTRLF.exe -navpath "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" -targetid 1339861 -zonex 1051 -zoney 737 -delay 1200 -maxconcurrency 5 -all
