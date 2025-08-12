@@ -1,49 +1,103 @@
-# Scanner Pixel avec PuppeteerSharp pour wplace.live
+name: Scanner Pixel avec PuppeteerSharp pour wplace.live
+description: >
+  Ce programme en C# utilise PuppeteerSharp pour scanner les pixels d'une image issue
+  du site wplace.live. Il fonctionne en ouvrant un navigateur headless (ex : Brave, Chrome)
+  et en effectuant des requêtes HTTP pour identifier les informations des pixels.
+  Les résultats sont exportés automatiquement en CSV.
 
-Ce programme en C# utilise PuppeteerSharp pour scanner des coordonnées dans une grille via des requêtes HTTP dans un navigateur headless (ex: Brave).
+features:
+  - Scan d'une zone 1000x1000 pixels depuis une tuile (`zonex`, `zoney`)
+  - Option pour regrouper les pixels de même couleur ou scanner pixel par pixel
+  - Gestion du délai entre requêtes pour éviter le blocage
+  - Multi-threading avec limitation du nombre de requêtes simultanées
+  - Export automatique au format CSV avec coordonnées, couleurs et infos joueur
+  - Affichage en temps réel de la progression avec barre Spectre.Console
 
----
+arguments:
+  - name: -navpath
+    description: Chemin complet vers l’exécutable du navigateur (Brave, Chrome, etc.)
+    required: true
+    default: null
+  - name: -zonex
+    description: Coordonnée X de la tuile (zone)
+    required: true
+    default: null
+  - name: -zoney
+    description: Coordonnée Y de la tuile (zone)
+    required: true
+    default: null
+  - name: -targetid
+    description: ID de l’utilisateur à rechercher (optionnel, filtre les résultats)
+    required: false
+    default: -1
+  - name: -delay
+    description: Délai initial en millisecondes entre chaque requête
+    required: false
+    default: 1100
+  - name: -xmin
+    description: Coordonnée X minimale à scanner (non utilisée dans la version actuelle)
+    required: false
+    default: 0
+  - name: -xmax
+    description: Coordonnée X maximale à scanner (non utilisée dans la version actuelle)
+    required: false
+    default: 999
+  - name: -ymin
+    description: Coordonnée Y minimale à scanner (non utilisée dans la version actuelle)
+    required: false
+    default: 0
+  - name: -ymax
+    description: Coordonnée Y maximale à scanner (non utilisée dans la version actuelle)
+    required: false
+    default: 999
+  - name: -maxconcurrency
+    description: Nombre maximal de requêtes simultanées
+    required: false
+    default: 1
+  - name: -all
+    description: Désactive le regroupement des pixels par couleur et scanne pixel par pixel
+    required: false
+    default: false
 
-## Fonctionnalités
+usage:
+  example: >
+    WPLACE_CTRLF.exe -navpath "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+    -targetid 1339861 -zonex 1051 -zoney 737 -delay 1200 -maxconcurrency 3 -all
+  notes:
+    - Les coordonnées `zonex` et `zoney` se trouvent via les DevTools du navigateur,
+      onglet "Network", en inspectant les requêtes envoyées lors d'un clic sur un pixel.
+    - `-targetid` permet de ne lister que les pixels posés par un joueur précis.
+    - `-all` augmente fortement le temps de scan, mais permet une analyse détaillée pixel par pixel.
 
-- Scan une zone rectangulaire définie par des coordonnées X et Y.
-- Supporte un pas (`step`) entre chaque requête.
-- Multi-threading avec un nombre max de requêtes simultanées (`maxConcurrency`).
-- Arguments en ligne de commande pour personnaliser la plage, le navigateur utilisé, et la cible.
-- Validation des arguments obligatoires (chemin navigateur, ID cible, zone).
+output:
+  format: CSV
+  filename: pixels_YYYYMMDD_HHMMSS.csv
+  columns:
+    - X
+    - Y
+    - PlayerID
+    - PlayerName
+    - AllianceID
+    - AllianceName
+    - RegionID
+    - RegionName
+    - Discord
+    - R
+    - V
+    - B
+  description: >
+    Le fichier CSV est créé automatiquement à la fin du scan ou à l’arrêt du programme
+    (Ctrl+C). Il contient toutes les informations collectées.
 
----
+requirements:
+  - .NET 6 ou supérieur
+  - PuppeteerSharp
+  - Newtonsoft.Json
+  - Spectre.Console
+  - Navigateur compatible (Brave, Chrome, Chromium)
 
-## Arguments
+screenshot:
+  path: docs/photo.png
+  description: Exemple de récupération des coordonnées `zonex` et `zoney` via DevTools
 
-| Argument         | Description                                      | Obligatoire | Par défaut        |
-|------------------|------------------------------------------------|-------------|-------------------|
-| `-navpath`       | Chemin complet vers l’exécutable du navigateur | Oui         | N/A               |
-| `-targetid`      | ID de l’utilisateur à rechercher                | Oui         | N/A               |
-| `-zonex`         | Coordonnée X de la zone                          | Oui         | N/A               |
-| `-zoney`         | Coordonnée Y de la zone                          | Oui         | N/A               |
-| `-xmin`          | Coordonnée X de départ                           | Non         | 0                 |
-| `-xmax`          | Coordonnée X de fin                              | Non         | 990               |
-| `-ymin`          | Coordonnée Y de départ                           | Non         | 0                 |
-| `-ymax`          | Coordonnée Y de fin                              | Non         | 990               |
-| `-step`          | Pas entre chaque scan                            | Non         | 10                |
-| `-maxconcurrency`| Nombre max de requêtes simultanées              | Non         | 5                 |
-
----
-
-## Validation
-
-- `-navpath`, `-targetid`, `-zonex`, `-zoney` sont obligatoires.
-- Les coordonnées X et Y doivent être entre 0 et 9999.
-- `-targetid` doit être un entier positif.
-
-Pour Trouver les zones, il faut aller dans les devtools du navigateur dans l'onglet network puis cliquer et voir la tramme émise , le target id est écris lors que lon clique sur un pixel posé par l'utilisateur :
-
-![Exemple zones](docs/photo.png)
-
----
-
-## Exemple d’utilisation
-
-```bash
-WPLACE_CTRLF.exe -navpath "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" -targetid 1339861 -zonex 1051 -zoney 737
+license: MIT
