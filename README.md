@@ -52,6 +52,11 @@ Ce programme en C# utilise PuppeteerSharp pour scanner des pixels dans une zone 
 - Les résultats sont automatiquement exportés dans un fichier CSV horodaté à la fin du scan ou lors d’un arrêt (Ctrl+C).
 - Le délai (`-delay`) est ajusté dynamiquement selon la charge et les erreurs HTTP rencontrées.
 
+
+Pour Trouver les zones, il faut aller dans les devtools du navigateur dans l'onglet network puis cliquer et voir la tramme émise , le target id est écris lors que lon clique sur un pixel posé par l'utilisateur :
+
+![Exemple zones](docs/photo.png)
+
 ---
 
 ## Exemple d’utilisation
