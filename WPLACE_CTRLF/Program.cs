@@ -57,7 +57,7 @@ namespace WPLACE_CTRLF
         }
 
         private static List<PixelResponse> _allPixels = new List<PixelResponse>();
-        
+        private static int zoneX = -1, zoneY = -1;
         static async Task Main(string[] args)
         {
 
@@ -76,9 +76,9 @@ namespace WPLACE_CTRLF
             int initdelai = 1100;
             int cptcgtdelai = 0;
 
-            int startX = 0, endX = 999, startY = 0, endY = 999, maxConcurrency = 1;
+            int xmin = 0, xmax = 999, ymin = 0, ymax = 999, maxConcurrency = 1;
             string browserPath = null;
-            int targetId = -1, zoneX = -1, zoneY = -1;
+            int targetId = -1;
             bool all = false;
 
 
@@ -87,10 +87,10 @@ namespace WPLACE_CTRLF
                 switch (args[i].ToLower())
                 {
                     case "-delay": int.TryParse(args[++i], out initdelai); break;
-                    case "-xmin": int.TryParse(args[++i], out startX); break;
-                    case "-xmax": int.TryParse(args[++i], out endX); break;
-                    case "-ymin": int.TryParse(args[++i], out startY); break;
-                    case "-ymax": int.TryParse(args[++i], out endY); break;                    
+                    case "-xmin": int.TryParse(args[++i], out xmin); break;
+                    case "-xmax": int.TryParse(args[++i], out xmax); break;
+                    case "-ymin": int.TryParse(args[++i], out ymin); break;
+                    case "-ymax": int.TryParse(args[++i], out ymax); break;                    
                     case "-maxconcurrency": int.TryParse(args[++i], out maxConcurrency); break;
                     case "-navpath": browserPath = args[++i]; break;
                     case "-targetid": int.TryParse(args[++i], out targetId); break;
@@ -126,7 +126,11 @@ namespace WPLACE_CTRLF
             var pixels = GetNonEmptyPixels(DownloadImageAsync($"https://backend.wplace.live/files/s0/tiles/{zoneX}/{zoneY}.png", browser).GetAwaiter().GetResult(), includeColor: true,grouped: !all);
 
             foreach (var p in pixels)
-            {                
+            {
+                if (p.X<=xmax&&p.Y<=ymax&& p.X >= xmin && p.Y >= ymin )
+                {
+
+                }
                 PixelnfoList.Add(p);
             }
             Console.WriteLine($"Total : {PixelnfoList.Count} Pixels");
@@ -261,7 +265,7 @@ namespace WPLACE_CTRLF
         {
             try
             {
-                string csvPath = $"pixels_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                string csvPath = $"{zoneX}_{zoneY}_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
                 using (var writer = new StreamWriter(csvPath))
                 {
                     writer.WriteLine("X,Y,PlayerID,PlayerName,AllianceID,AllianceName,RegionID,RegionName,Discord,R,V,B");
