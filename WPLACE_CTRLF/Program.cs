@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using PuppeteerSharp;
 using static WPLACE_CTRLF.Program;
 using System.Net.Configuration;
+using System.Globalization;
 
 namespace WPLACE_CTRLF
 {
@@ -50,7 +51,7 @@ namespace WPLACE_CTRLF
             public Region region { get; set; }
             public int X { get; set; }
             public int Y { get; set; }
-
+            public string link { get; set; }
             public int R { get; set; }
             public int V { get; set; }
             public int B { get; set; }
@@ -68,7 +69,7 @@ namespace WPLACE_CTRLF
 
                 foreach (var pixel in _allPixels)
                 {
-                    Console.WriteLine($"{pixel.X},{pixel.Y},{pixel.paintedBy?.id},{pixel.paintedBy?.name},{pixel.paintedBy?.allianceId},{pixel.paintedBy?.allianceName},{pixel.region?.id},{pixel.region?.name},{pixel.paintedBy?.discord},{pixel.R},{pixel.V},{pixel.B}");
+                    Console.WriteLine($"{pixel.X},{pixel.Y},{pixel.paintedBy?.id},{pixel.paintedBy?.name},{pixel.paintedBy?.allianceId},{pixel.paintedBy?.allianceName},{pixel.region?.id},{pixel.region?.name},{pixel.paintedBy?.discord},{pixel.R},{pixel.V},{pixel.B},{pixel.link}");
                 }
                 CSV();
                 Environment.Exit(0);
@@ -129,9 +130,9 @@ namespace WPLACE_CTRLF
             {
                 if (p.X<=xmax&&p.Y<=ymax&& p.X >= xmin && p.Y >= ymin )
                 {
-
+                    PixelnfoList.Add(p);
                 }
-                PixelnfoList.Add(p);
+                
             }
             Console.WriteLine($"Total : {PixelnfoList.Count} Pixels");
             total = PixelnfoList.Count;
@@ -188,7 +189,7 @@ namespace WPLACE_CTRLF
 
                                         try
                                         {
-                                            var pixelData = JsonConvert.DeserializeObject<PixelResponse>(content);
+                                            PixelResponse pixelData = JsonConvert.DeserializeObject<PixelResponse>(content);
 
                                             pixelData.X=Pixel.X;
                                             pixelData.Y=Pixel.Y;
@@ -196,6 +197,9 @@ namespace WPLACE_CTRLF
                                             pixelData.R = Pixel.Color.R;
                                             pixelData.V = Pixel.Color.G;
                                             pixelData.B = Pixel.Color.B;
+
+                                            pixelData.link = xytolatlong(zoneX,zoneY, Pixel.X, Pixel.Y);
+
                                             _allPixels.Add(pixelData);
 
                                             completed++;
@@ -224,18 +228,6 @@ namespace WPLACE_CTRLF
                                     {
                                         
                                         progressTask.Value = completed;
-
-                                        
-                                        //if (foundPoints.Count > 0)
-                                        //{
-                                        //    var table = new Table().Centered();
-                                        //    table.AddColumn("[green]Target Pixels[/]");
-                                        //    foreach (var point in foundPoints)
-                                        //    {
-                                        //        table.AddRow(point);
-                                        //    }
-                                        //    AnsiConsole.Write(table);
-                                        //}
 
                                         
                                         if (erreur)
@@ -271,7 +263,7 @@ namespace WPLACE_CTRLF
                     writer.WriteLine("X,Y,PlayerID,PlayerName,AllianceID,AllianceName,RegionID,RegionName,Discord,R,V,B");
                     foreach (var p in _allPixels)
                     { 
-                        writer.WriteLine($"{p.X},{p.Y},{p.paintedBy?.id},{p.paintedBy?.name},{p.paintedBy?.allianceId},{p.paintedBy?.allianceName},{p.region?.id},{p.region?.name},{p.paintedBy?.discord},{p.R},{p.V},{p.B}");
+                        writer.WriteLine($"{p.X},{p.Y},{p.paintedBy?.id},{p.paintedBy?.name},{p.paintedBy?.allianceId},{p.paintedBy?.allianceName},{p.region?.id},{p.region?.name},{p.paintedBy?.discord},{p.R},{p.V},{p.B},{p.link}");
                     }
                 }
                 Console.WriteLine($"\n[CSV] Export terminé : {csvPath}");
@@ -380,6 +372,26 @@ namespace WPLACE_CTRLF
                 await page.CloseAsync();
                 throw new Exception($"Impossible de télécharger l'image, statut HTTP: {response?.Status}");
             }
+        }
+        public static string xytolatlong(int xTile, int yTile, int px, int py, int tileSize = 1000)
+        {
+            const int tilesPerAxis = 2048;
+            double mapSize = (double)tilesPerAxis * tileSize; 
+
+           
+            double globalX = (double)xTile * tileSize + px;
+            double globalY = (double)yTile * tileSize + py;
+
+            
+            double xNorm = Math.Min(1.0, Math.Max(0.0, globalX / mapSize));
+            double yNorm = Math.Min(1.0, Math.Max(0.0, globalY / mapSize));
+
+            
+            double lon = xNorm * 360.0 - 180.0;
+            double latRad = Math.Atan(Math.Sinh(Math.PI * (1.0 - 2.0 * yNorm)));
+            double lat = latRad * 180.0 / Math.PI;
+
+            return $"https://wplace.live/?lat={lat.ToString(CultureInfo.InvariantCulture)}&lng={lon.ToString(CultureInfo.InvariantCulture)}&zoom=22";
         }
 
     } 
