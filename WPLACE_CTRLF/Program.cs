@@ -64,10 +64,10 @@ namespace WPLACE_CTRLF
 
             Console.CancelKeyPress += (sender, e) =>
             {
-                e.Cancel = true; // empêche l’arrêt immédiat
+                e.Cancel = true; 
                 Console.WriteLine("\n--- Pixels enregistrés avant l'arrêt ---");
-
-                foreach (var pixel in _allPixels)
+                var PixelnfoListCopie = _allPixels.ToList();
+                foreach (var pixel in PixelnfoListCopie)
                 {
                     Console.WriteLine($"{pixel.X},{pixel.Y},{pixel.paintedBy?.id},{pixel.paintedBy?.name},{pixel.paintedBy?.allianceId},{pixel.paintedBy?.allianceName},{pixel.region?.id},{pixel.region?.name},{pixel.paintedBy?.discord},{pixel.R},{pixel.V},{pixel.B},{pixel.link}");
                 }
