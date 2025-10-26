@@ -22,6 +22,8 @@ namespace WPLACE_CTRLF
     {
         public class PixelInfo
         {
+            public int tlX { get; set; }
+            public int tlY { get; set; }
             public int X { get; set; }
             public int Y { get; set; }
             public System.Drawing.Color Color { get; set; }
@@ -49,6 +51,8 @@ namespace WPLACE_CTRLF
         {
             public PaintedBy paintedBy { get; set; }
             public Region region { get; set; }
+            public int tlX { get; set; }
+            public int tlY { get; set; }
             public int X { get; set; }
             public int Y { get; set; }
             public string link { get; set; }
@@ -58,29 +62,19 @@ namespace WPLACE_CTRLF
         }
 
         private static List<PixelResponse> _allPixels = new List<PixelResponse>();
-        private static int zoneX = -1, zoneY = -1;
+        private static int zoneX = -1, zoneY = -1,pixelX=-1,pixelY=-1;
         static async Task Main(string[] args)
         {
 
-            Console.CancelKeyPress += (sender, e) =>
-            {
-                e.Cancel = true; 
-                Console.WriteLine("\n--- Pixels enregistrés avant l'arrêt ---");
-                var PixelnfoListCopie = _allPixels.ToList();
-                foreach (var pixel in PixelnfoListCopie)
-                {
-                    Console.WriteLine($"{pixel.X},{pixel.Y},{pixel.paintedBy?.id},{pixel.paintedBy?.name},{pixel.paintedBy?.allianceId},{pixel.paintedBy?.allianceName},{pixel.region?.id},{pixel.region?.name},{pixel.paintedBy?.discord},{pixel.R},{pixel.V},{pixel.B},{pixel.link}");
-                }
-                CSV();
-                Environment.Exit(0);
-            };
-            int initdelai = 1100;
+            
+            int initdelai = 200;
             int cptcgtdelai = 0;
 
-            int xmin = 0, xmax = 999, ymin = 0, ymax = 999, maxConcurrency = 1;
-            string browserPath = null;
+            int xmin = 0, xmax = 999, ymin = 0, ymax = 999, maxConcurrency = 1,echantillon=100,topplayerCount=5,topallianceCount=3;
+            string browserPath = null,imagepath=null;
             int targetId = -1;
             bool all = false;
+
 
 
             for (int i = 0; i < args.Length; i++)
@@ -98,12 +92,38 @@ namespace WPLACE_CTRLF
                     case "-zonex": int.TryParse(args[++i], out zoneX); break;
                     case "-zoney": int.TryParse(args[++i], out zoneY); break;
                     case "-all": all = true; break;
+                    case "-imgpath": imagepath = args[++i]; break;
+                    case "-pixelx": int.TryParse(args[++i], out pixelX); break;
+                    case "-pixely": int.TryParse(args[++i], out pixelY); break;
+                    case "-coords": var parts = args[++i].Split(',').Select(short.Parse).ToArray(); zoneX = parts[0]; zoneY = parts[1]; pixelX = parts[2]; pixelY = parts[3]; break;
+                    case "-echantillon": int.TryParse(args[++i], out echantillon); break;
+                    case "-topplayer": int.TryParse(args[++i], out topplayerCount); break;
+                    case "-topalliance": int.TryParse(args[++i], out topallianceCount); break;
+
                 }
             }
 
-           
+            int delai=initdelai;
             if (string.IsNullOrEmpty(browserPath)) { Console.WriteLine("ERREUR : -navpath est obligatoire."); return; }           
             if (zoneX < 0 || zoneY < 0) { Console.WriteLine("ERREUR : -zonex et -zoney sont obligatoires."); return; }
+            if ((imagepath != null && pixelX < 0)|| (imagepath != null && pixelY < 0)) { Console.WriteLine("ERREUR : -pixelx et -pixely sont obligatoires."); return; }
+
+
+            Console.CancelKeyPress += (sender, e) =>
+            {
+                e.Cancel = true;
+                Console.WriteLine("\n--- Pixels enregistrés avant l'arrêt ---");
+                var PixelnfoListCopie = _allPixels.ToList();
+
+                CSV();
+
+
+                Console.WriteLine();
+                Console.WriteLine(GetTopSummary(PixelnfoListCopie, topplayerCount, topallianceCount));
+                Environment.Exit(0);
+            };
+
+
 
 
             var browser = await Puppeteer.LaunchAsync(new LaunchOptions
@@ -119,17 +139,26 @@ namespace WPLACE_CTRLF
             int total;
             int completed = 0;
             object lockObj = new object();
-
             var foundPoints = new ConcurrentBag<string>();
+            List<PixelInfo> pixels = null;
+            if (imagepath == null)
+            {
+                
 
-            Console.WriteLine($"Téléchargemnt de l'image ...");
+                Console.WriteLine($"Téléchargemnt de l'image ...");
 
-            var pixels = GetNonEmptyPixels(DownloadImageAsync($"https://backend.wplace.live/files/s0/tiles/{zoneX}/{zoneY}.png", browser).GetAwaiter().GetResult(), includeColor: true,grouped: !all);
+                pixels = GetNonEmptyPixels(DownloadImageAsync($"https://backend.wplace.live/files/s0/tiles/{zoneX}/{zoneY}.png", browser).GetAwaiter().GetResult(), includeColor: true, grouped: !all);
+            }
+            else
+            {
+                pixels = ExtractPixels(imagepath, zoneX, zoneY, pixelX, pixelY,echantillon);
+            }
+            
 
             foreach (var p in pixels)
             {
                 if (p.X<=xmax&&p.Y<=ymax&& p.X >= xmin && p.Y >= ymin )
-                {
+                {                    
                     PixelnfoList.Add(p);
                 }
                 
@@ -172,12 +201,12 @@ namespace WPLACE_CTRLF
                                     var page = await browser.NewPageAsync();
                                     await page.SetUserAgentAsync("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36");
 
-                                    var response = await page.GoToAsync($"https://backend.wplace.live/s0/pixel/{zoneX}/{zoneY}?x={Pixel.X}&y={Pixel.Y}");
+                                    var response = await page.GoToAsync($"https://backend.wplace.live/s0/pixel/{Pixel.tlX}/{Pixel.tlY}?x={Pixel.X}&y={Pixel.Y}");
 
                                     if (response != null && response.Ok)
                                     {
                                         cptcgtdelai++;
-                                        if (cptcgtdelai >= 10 && initdelai > 1100)
+                                        if (cptcgtdelai >= 10 && initdelai > delai)
                                         {
                                             cptcgtdelai = 0;
                                             initdelai -= 100;
@@ -191,6 +220,8 @@ namespace WPLACE_CTRLF
                                         {
                                             PixelResponse pixelData = JsonConvert.DeserializeObject<PixelResponse>(content);
 
+                                            pixelData.tlX = Pixel.tlX;
+                                            pixelData.tlY = Pixel.tlY;
                                             pixelData.X=Pixel.X;
                                             pixelData.Y=Pixel.Y;
 
@@ -198,7 +229,7 @@ namespace WPLACE_CTRLF
                                             pixelData.V = Pixel.Color.G;
                                             pixelData.B = Pixel.Color.B;
 
-                                            pixelData.link = xytolatlong(zoneX,zoneY, Pixel.X, Pixel.Y);
+                                            pixelData.link = xytolatlong(Pixel.tlX,Pixel.tlY, Pixel.X, Pixel.Y);
 
                                             _allPixels.Add(pixelData);
 
@@ -249,6 +280,8 @@ namespace WPLACE_CTRLF
 
             CSV();
 
+            Console.WriteLine();
+            Console.WriteLine(GetTopSummary(_allPixels));
 
             Console.WriteLine("\nScan terminé !");
         }
@@ -260,10 +293,10 @@ namespace WPLACE_CTRLF
                 string csvPath = $"{zoneX}_{zoneY}_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
                 using (var writer = new StreamWriter(csvPath))
                 {
-                    writer.WriteLine("X,Y,PlayerID,PlayerName,AllianceID,AllianceName,RegionID,RegionName,Discord,R,V,B");
+                    writer.WriteLine("tlX,tlY,X,Y,PlayerID,PlayerName,AllianceID,AllianceName,RegionID,RegionName,Discord,R,V,B,link");
                     foreach (var p in _allPixels)
                     { 
-                        writer.WriteLine($"{p.X},{p.Y},{p.paintedBy?.id},{p.paintedBy?.name},{p.paintedBy?.allianceId},{p.paintedBy?.allianceName},{p.region?.id},{p.region?.name},{p.paintedBy?.discord},{p.R},{p.V},{p.B},{p.link}");
+                        writer.WriteLine($"{p.X},{p.Y},{p.X},{p.Y},{p.paintedBy?.id},{p.paintedBy?.name},{p.paintedBy?.allianceId},{p.paintedBy?.allianceName},{p.region?.id},{p.region?.name},{p.paintedBy?.discord},{p.R},{p.V},{p.B},{p.link}");
                     }
                 }
                 Console.WriteLine($"\n[CSV] Export terminé : {csvPath}");
@@ -347,6 +380,8 @@ namespace WPLACE_CTRLF
                         {
                             X = x,
                             Y = y,
+                            tlY = zoneY,
+                            tlX = zoneX,
                             Color = includeColor ? c : System.Drawing.Color.Empty
                         });
                     }
@@ -372,6 +407,88 @@ namespace WPLACE_CTRLF
                 await page.CloseAsync();
                 throw new Exception($"Impossible de télécharger l'image, statut HTTP: {response?.Status}");
             }
+        }
+        public static List<PixelInfo> ExtractPixels(string pngPath, int startTileX, int startTileY, int startPxX, int startPxY, double percentage = 100.0)
+        {
+            var allPixels = new List<PixelInfo>();
+
+            using (var bmp = new Bitmap(pngPath))
+            {
+                int width = bmp.Width;
+                int height = bmp.Height;
+
+                for (int py = 0; py < height; py++)
+                {
+                    for (int px = 0; px < width; px++)
+                    {
+                        System.Drawing.Color c = bmp.GetPixel(px, py);
+
+                        if (c.A == 0) continue;
+
+                        int globalX = startPxX + px;
+                        int globalY = startPxY + py;
+
+                        int tileX = startTileX + (globalX / 1000);
+                        int tileY = startTileY + (globalY / 1000);
+
+                        int localX = globalX % 1000;
+                        int localY = globalY % 1000;
+
+                        allPixels.Add(new PixelInfo
+                        {
+                            tlX = tileX,
+                            tlY = tileY,
+                            X = localX,
+                            Y = localY
+                        });
+                    }
+                }
+            }
+
+            if (percentage < 100.0 && percentage > 0.0 && allPixels.Count > 0)
+            {
+                int takeCount = (int)Math.Ceiling(allPixels.Count * (percentage / 100.0));
+                var sampled = new List<PixelInfo>();
+
+                double step = (double)allPixels.Count / takeCount;
+                for (int i = 0; i < takeCount; i++)
+                {
+                    int index = (int)Math.Floor(i * step);
+                    sampled.Add(allPixels[index]);
+                }
+
+                return sampled;
+            }
+
+            return allPixels;
+        }
+        public static string GetTopSummary(List<PixelResponse> pixels, int topPlayersCount = 5, int topAlliancesCount = 3)
+        {
+            if (pixels == null || pixels.Count == 0)
+                return "Aucun pixel.";
+
+            int total = pixels.Count;
+
+            var topPlayers = pixels
+                .Where(p => p.paintedBy != null)
+                .GroupBy(p => p.paintedBy.name)
+                .Select(g => new { Player = g.Key, Count = g.Count(), Percent = (g.Count() * 100.0) / total })
+                .OrderByDescending(x => x.Count)
+                .Take(topPlayersCount)
+                .ToList();
+
+            var topAlliances = pixels
+                .Where(p => p.paintedBy != null)
+                .GroupBy(p => string.IsNullOrEmpty(p.paintedBy.allianceName) ? "Sans alliance" : p.paintedBy.allianceName)
+                .Select(g => new { Alliance = g.Key, Count = g.Count(), Percent = (g.Count() * 100.0) / total })
+                .OrderByDescending(x => x.Count)
+                .Take(topAlliancesCount)
+                .ToList();
+
+            string playersPart = "Joueurs: " + string.Join(", ", topPlayers.Select(p => $"{p.Player} {p.Percent:0.0}%"));
+            string alliancesPart = "Alliances: " + string.Join(", ", topAlliances.Select(a => $"{a.Alliance} {a.Percent:0.0}%"));
+
+            return $"{playersPart} | {alliancesPart}";
         }
         public static string xytolatlong(int xTile, int yTile, int px, int py, int tileSize = 1000)
         {
